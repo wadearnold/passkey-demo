@@ -1,0 +1,24 @@
+{
+  "name": "webauthn-passkey-demo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "./start-dev.sh",
+    "dev:direct": "vite",
+    "dev:localhost": "./start-localhost.sh",
+    "build": "vite build",
+    "build:ngrok": "./build-with-ngrok.sh",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^7.0.0"
+  }
+}

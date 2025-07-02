@@ -1,0 +1,92 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+build/
+dist/
+*.app
+*.ipa
+
+# iOS specific
+frontend-swift/build/
+frontend-swift/DerivedData/
+frontend-swift/*.xcworkspace
+frontend-swift/.swiftpm/
+frontend-swift/ngrok-config.json
+
+# Go specific
+backend/passkey-backend
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Environment and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.mobileprovision
+
+# ngrok
+ngrok
+ngrok.exe
+ngrok.yml
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Coverage reports
+coverage/
+*.cover
+*.py,cover
+*.coverage
+.coverage
+.coverage.*
+
+# React
+frontend-react/build/
+frontend-react/.env.local
+frontend-react/.env.development.local
+frontend-react/.env.test.local
+frontend-react/.env.production.local
+
+# Backend specific
+backend/.env
+backend/certs/
+backend/*.log
