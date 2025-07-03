@@ -1,6 +1,6 @@
 # Passkey Demo Backend
 
-Go WebAuthn server implementing passwordless authentication with cross-platform passkey support.
+Go WebAuthn server implementing passwordless authentication with cross-platform passkey support. In ngrok mode, it also serves the React frontend as static assets.
 
 ## Configuration
 
@@ -32,12 +32,19 @@ go run . -localhost
 cd ..
 ./scripts/start-ngrok.sh
 
-# 2. Run backend with ngrok configuration
-cd backend
+# 2. Build React app with ngrok URL
+cd frontend-react
+npm run build:ngrok
+
+# 3. Run backend (serves React build + API)
+cd ../backend
 source ../.env && go run .
 # RPID: your-tunnel.ngrok.io
 # Origin: https://your-tunnel.ngrok.io
+# Serves React app at: https://your-tunnel.ngrok.io
 ```
+
+The backend automatically serves the React build from `../frontend-react/dist` when available.
 
 **Alternative: Manual ngrok configuration**
 ```bash
@@ -96,6 +103,31 @@ The backend automatically serves this file at:
 - `/.well-known/apple-app-site-association`
 
 This enables iOS apps to use passkeys created by the backend.
+
+## Static File Serving
+
+The backend can serve the React frontend build:
+
+**In ngrok mode:**
+- Automatically serves React build from `../frontend-react/dist`
+- Access the full app at your ngrok URL (e.g., `https://abc123.ngrok.io`)
+- No separate frontend server needed
+
+**In localhost mode:**
+- Use React dev server (`npm run dev`) for hot reloading
+- Backend serves API only at `http://localhost:8080`
+- Frontend runs separately at `http://localhost:5173`
+
+To enable static serving:
+```bash
+# Build React app first
+cd frontend-react
+npm run build:ngrok  # For ngrok mode
+# or
+npm run build        # For localhost mode
+
+# Backend will automatically detect and serve the build
+```
 
 ## Debugging
 

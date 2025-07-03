@@ -15,15 +15,21 @@ Native iOS app demonstrating WebAuthn passkey authentication with cross-platform
 # 1. Start ngrok (from root directory)
 ../scripts/start-ngrok.sh
 
-# 2. Configure iOS app
+# 2. Build React app for ngrok
+cd frontend-react
+npm install && npm run build:ngrok
+
+# 3. Configure iOS app
+cd ../frontend-swift
 ./setup-domain.sh
 # Note your Team ID from output
 
-# 3. Configure backend AASA
+# 4. Setup and run backend
 cd ../backend
 ./setup-aasa.sh YOUR_TEAM_ID
+source ../.env && ./passkey-backend
 
-# 4. Build and run in Xcode
+# 5. Build and run iOS app in Xcode
 ```
 
 ### Configuration Files

@@ -24,21 +24,23 @@ This project demonstrates WebAuthn passkey authentication with:
 # 1. Start ngrok tunnel
 ./scripts/start-ngrok.sh
 
-# 2. Configure iOS app (note your Team ID)
-cd frontend-swift
+# 2. Build React app for ngrok
+cd frontend-react
+npm install && npm run build:ngrok
+
+# 3. Configure iOS app (note your Team ID)
+cd ../frontend-swift
 ./setup-domain.sh
 
-# 3. Setup backend with your Team ID
+# 4. Setup and run backend (serves React build)
 cd ../backend
 ./setup-aasa.sh YOUR_TEAM_ID
 source ../.env && ./passkey-backend
 
-# 4. Start React frontend
-cd ../frontend-react
-npm install && npm run dev
-
 # 5. Build iOS app in Xcode
 ```
+
+**Access the app at your ngrok URL** (e.g., `https://abc123.ngrok.io`)
 
 ### Local Development (Web Only)
 

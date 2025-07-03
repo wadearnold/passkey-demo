@@ -29,22 +29,40 @@ npm run dev
 
 ## Running the Frontend
 
+### Development Mode (localhost only)
 ```bash
 # Install dependencies
 npm install
 
-# Development modes
+# Start dev server with hot reload
+npm run dev:localhost
+# Access at http://localhost:5173
+# Backend API at http://localhost:8080
+```
+
+### Production Mode (ngrok/cross-platform)
+```bash
+# Build for ngrok (required for iOS testing)
+npm run build:ngrok
+# Creates dist/ folder with ngrok-configured build
+# Backend serves this at https://your-ngrok-url.ngrok.io
+
+# Build for localhost
+npm run build
+# Creates dist/ folder for localhost deployment
+```
+
+### All Available Commands
+```bash
 npm run dev           # Auto-detects ngrok from ../.env, falls back to localhost
 npm run dev:localhost # Force localhost mode
 npm run dev:direct    # Run Vite directly without configuration scripts
-
-# Production builds
 npm run build        # Standard build (localhost)
 npm run build:ngrok  # Build with ngrok URL from ../.env
-
-# Preview production build
-npm run preview
+npm run preview      # Preview production build locally
 ```
+
+**Important**: For ngrok/iOS testing, you must use `npm run build:ngrok` and access through the backend's ngrok URL, not the dev server.
 
 ## Features
 
