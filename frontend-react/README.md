@@ -1,259 +1,183 @@
-# WebAuthn Passkey Demo - React Frontend
+# Passkey Demo - React Frontend
 
-A React 19 web frontend demonstrating WebAuthn passkey authentication with deep link support. Part of a multi-platform passkey demo showcasing cross-platform compatibility.
+React web application demonstrating WebAuthn passkey authentication with cross-platform support.
 
-## 🚨 **REQUIRED**: Domain Setup First
+## Configuration
 
-**This frontend uses `passkey-demo.local` for cross-platform WebAuthn compatibility. You MUST configure local domain resolution:**
+### Backend URL
+The frontend connects to the backend API, which can be configured in different ways:
+- **Localhost mode**: `http://localhost:8080` (default)
+- **ngrok mode**: Automatically uses `NGROK_URL` from `../.env`
 
+### Environment Setup
+
+**For localhost development:**
 ```bash
-# Add to /etc/hosts (requires sudo)
-sudo vim /etc/hosts
-
-# Add this line:
-127.0.0.1 passkey-demo.local
+npm run dev:localhost
+# Uses http://localhost:8080 for API
 ```
 
-## 🚀 Quick Start
+**For ngrok (cross-platform testing):**
+```bash
+# 1. Start ngrok first (from root directory)
+../scripts/start-ngrok.sh
+
+# 2. Run with ngrok configuration
+npm run dev
+# Automatically uses NGROK_URL from ../.env
+```
+
+## Running the Frontend
 
 ```bash
+# Install dependencies
 npm install
-npm run dev
+
+# Development modes
+npm run dev           # Auto-detects ngrok from ../.env, falls back to localhost
+npm run dev:localhost # Force localhost mode
+npm run dev:direct    # Run Vite directly without configuration scripts
+
+# Production builds
+npm run build        # Standard build (localhost)
+npm run build:ngrok  # Build with ngrok URL from ../.env
+
+# Preview production build
+npm run preview
 ```
 
-The custom dev script displays cross-platform configuration info, setup reminders, and starts Vite with helpful guidance.
+## Features
 
-**Access the demo at**: [http://passkey-demo.local:5173](http://passkey-demo.local:5173)
+- **Passkey Registration**: Create passkeys with biometric authentication
+- **Discoverable Login**: Sign in without entering username
+- **Username-based Login**: Traditional flow with passkey authentication
+- **Deep Link Support**: Protected routes with authentication redirect
+- **Passkey Management**: View and delete registered passkeys
 
-⚠️ **Important**: Use `passkey-demo.local:5173`, NOT `localhost:5173` for proper cross-platform passkey functionality.
+## Debugging
 
-### Expected Output
+### Browser Console
 
-```bash
-$ npm run dev
-
-🌐 Cross-Platform WebAuthn Passkey Demo
-========================================
-🔐 React Frontend: http://passkey-demo.local:5173
-📡 Backend API: http://passkey-demo.local:8080
-
-⚠️  CRITICAL SETUP REQUIRED:
-   Add to /etc/hosts (requires sudo):
-   127.0.0.1 passkey-demo.local
-
-🔗 For detailed setup: See README.md
-🚀 Starting Vite development server...
-   Note: Vite shows localhost URLs, but use passkey-demo.local instead
-
-  VITE v7.0.0  ready in 128 ms
-  ➜  Local:   http://localhost:5173/  ← Ignore this
-  ➜  Network: http://10.0.0.202:5173/ ← Ignore this
-  ➜  USE THIS: http://passkey-demo.local:5173/
-```
-
-### Alternative Commands
-
-```bash
-# Start with domain configuration info (recommended)
-npm run dev
-
-# Start Vite directly (skip custom messaging)
-npm run dev:direct
-```
-
-## 🔧 Features
-
-- **Passwordless Authentication**: True passwordless login using WebAuthn passkeys
-- **Discoverable Credentials**: Sign in without entering a username
-- **Deep Link Authentication**: Protected routes with automatic redirect after login
-- **Real-time Validation**: Client-side username validation with visual feedback
-- **Comprehensive UI**: Detailed passkey information and management
-
-## 🔍 Troubleshooting Biometric Authentication
-
-If passkeys are requesting your **system password** instead of **biometrics** (Touch ID, Face ID, fingerprint), the issue is typically system-level configuration, not the demo code.
-
-### **Step 1: Check Browser Console**
-
-Open Developer Tools (F12) → Console tab and look for these logs during registration:
+The app logs detailed WebAuthn information:
 
 ```javascript
-// Should show proper WebAuthn configuration
-Enhanced WebAuthn Options: {
-  authenticatorSelection: {
-    authenticatorAttachment: 'platform',
-    userVerification: 'required',
-    requireResidentKey: true
-  }
-}
+// Check during registration
+console.log('WebAuthn options:', publicKeyCredentialCreationOptions);
+console.log('Platform authenticator available:', 
+  await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
 
-// Critical: Check if biometric authenticator is available
-Platform authenticator available: true/false
+// Check during login
+console.log('Assertion options:', publicKeyCredentialRequestOptions);
+console.log('Credential response:', credential);
 ```
 
-### **Step 2: System Settings Check**
+### Common Issues
 
-#### **macOS (Chrome/Safari)**
-1. **System Settings → Touch ID & Passcode**
-   - ✅ Ensure "Use Touch ID for Safari" is enabled
-   - ✅ Test Touch ID works in other apps
-   
-2. **Chrome Settings**
-   - Navigate to `chrome://settings/content/securityKeys`
-   - ✅ Enable "Allow sites to manage security keys"
-   
-3. **Safari Alternative**
-   - Try the demo in Safari browser
-   - Safari often has better Touch ID integration on macOS
+**"WebAuthn not supported" error**
+- Check browser compatibility (Chrome 67+, Safari 14+, Firefox 60+)
+- Ensure HTTPS or localhost connection
+- Verify browser security settings
 
-#### **iOS (Safari/Chrome)**
-1. **Settings → Face ID & Passcode**
-   - ✅ Enable "Safari" under "Use Face ID For"
-   
-2. **Safari Settings → AutoFill**
-   - ✅ Enable "Passkeys"
+**CORS errors**
+- Ensure backend is running
+- Check that frontend and backend are using matching configurations (both localhost or both ngrok)
+- Verify backend CORS configuration includes frontend origin
 
-#### **Android (Chrome)**
-1. **Settings → Passwords & accounts → Google**
-   - ✅ Enable "Passkeys"
-   
-2. **Chrome Settings → Passwords**
-   - ✅ Enable "Offer to save passwords"
+**"RPID mismatch" error**
+- Access frontend via same domain as backend RPID
+- For localhost: use `http://localhost:5173`
+- For ngrok: ensure both frontend and backend use ngrok URLs
 
-#### **Windows (Chrome/Edge)**
-1. **Settings → Accounts → Sign-in options**
-   - ✅ Set up Windows Hello (fingerprint, face, or PIN)
-   
-2. **Chrome/Edge Settings**
-   - ✅ Enable security key/passkey features
+**Biometrics not working**
+- Check system biometric settings
+- Try different browser (Safari on macOS often works better)
+- Clear browser data and retry
+- See troubleshooting section below
 
-### **Step 3: Debugging Different Scenarios**
+### Biometric Authentication Troubleshooting
 
-#### **Scenario A: `Platform authenticator available: false`**
-**Problem**: System not exposing biometric authenticator to browser
-**Solutions**:
-- Check system biometric settings above
-- Restart browser after enabling settings
-- Try different browser (Safari on macOS, Edge on Windows)
-- Reboot system if recently enabled biometrics
+If passkeys request system password instead of biometrics:
 
-#### **Scenario B: `Platform authenticator available: true` but still uses password**
-**Problem**: Browser policy falling back to password
-**Solutions**:
-- Clear browser data for localhost
-- Try incognito/private browsing mode
-- Check if Touch ID sensor needs cleaning
-- Verify no recent failed biometric attempts
+**1. Verify WebAuthn Configuration**
+```javascript
+// Should see in console:
+Platform authenticator available: true
+authenticatorAttachment: 'platform'
+userVerification: 'required'
+```
 
-#### **Scenario C: Works sometimes, not others**
-**Problem**: Inconsistent biometric availability
-**Common causes**:
-- Touch ID sensor dirty/wet
-- Multiple failed attempts triggered fallback
-- System under heavy load
-- Browser background/focus issues
+**2. System Settings**
+- **macOS**: System Settings → Touch ID → Enable for browser
+- **Windows**: Settings → Sign-in options → Set up Windows Hello
+- **iOS**: Settings → Face ID → Enable for Safari
+- **Android**: Settings → Passwords → Enable passkeys
 
-### **Step 4: Browser-Specific Testing**
+**3. Browser Settings**
+- Chrome: `chrome://settings/securityKeys`
+- Safari: Preferences → AutoFill → Passkeys
+- Edge: Settings → Profiles → Passwords
 
-Try the demo in multiple browsers to isolate the issue:
+**4. Test with Other Sites**
+- Try [webauthn.io](https://webauthn.io)
+- If those also use password, it's a system configuration issue
 
-| Browser | Expected Behavior |
-|---------|------------------|
-| **Safari (macOS)** | Best Touch ID integration |
-| **Chrome (macOS)** | Good, but may require settings |
-| **Firefox (macOS)** | Limited WebAuthn support |
-| **Chrome (Android)** | Good fingerprint integration |
-| **Safari (iOS)** | Excellent Face ID integration |
-| **Edge (Windows)** | Good Windows Hello integration |
+## Project Structure
 
-### **Step 5: Alternative Testing**
-
-If biometrics still don't work, test with other WebAuthn demos:
-- [webauthn.io](https://webauthn.io)
-- [passkeys.dev](https://passkeys.dev)
-
-If those also use system password, the issue is definitely system configuration, not this demo.
-
-### **Step 6: Common System Password Triggers**
-
-The system may request password instead of biometrics when:
-- ✋ **Security Policy**: System requires password confirmation for new credentials
-- ✋ **Failed Attempts**: Multiple failed biometric attempts triggered fallback
-- ✋ **Sensor Issues**: Biometric sensor not working properly
-- ✋ **First Setup**: Initial passkey setup requires password confirmation
-- ✋ **System Load**: High CPU/memory usage affecting biometric processing
-
-## 🎯 Expected Behavior
-
-When properly configured, you should see:
-
-### **Registration Flow**
-1. Click "Create Passkey"
-2. Browser shows native biometric prompt (Touch ID, Face ID, etc.)
-3. Complete biometric authentication
-4. Passkey created and user logged in
-
-### **Login Flow**
-1. Click "Sign in with Passkey"
-2. Browser shows available passkeys
-3. Select your passkey
-4. Authenticate with biometrics
-5. Signed in successfully
-
-## 🔧 Development
-
-### **Project Structure**
 ```
 src/
-├── components/          # React components
-│   ├── Dashboard.jsx    # User dashboard with passkey management
-│   ├── LoginForm.jsx    # Authentication forms
-│   ├── Profile.jsx      # Protected profile page
-│   └── RegisterForm.jsx # Registration with validation
+├── components/
+│   ├── Dashboard.jsx      # Main UI with all auth flows
+│   ├── LoginForm.jsx      # Login UI component
+│   ├── RegisterForm.jsx   # Registration UI
+│   └── Profile.jsx        # Protected route example
 ├── hooks/
-│   └── useWebAuthn.js   # WebAuthn API integration
+│   └── useWebAuthn.js     # WebAuthn API wrapper
 ├── services/
-│   └── api.js          # Backend API client
-└── App.jsx             # Main app with routing
+│   └── api.js            # Backend API client
+└── App.jsx               # Routes and layout
 ```
 
-### **Key Files**
-- **`useWebAuthn.js`**: Core WebAuthn implementation
-- **`api.js`**: Communication with Go backend
-- **`Profile.jsx`**: Demonstrates protected routes
-- **`Dashboard.jsx`**: Passkey management interface
+## Development Tips
 
-### **Environment Variables**
-The frontend expects the backend at `http://localhost:8080`. Modify `API_BASE` in `src/services/api.js` if using a different backend URL.
+### Testing Different Flows
+1. **Registration**: Create multiple test users
+2. **Discoverable Login**: Test without username
+3. **Protected Routes**: Try accessing `/profile` directly
+4. **Cross-Platform**: Register on one device, login on another
 
-## 🐛 Common Issues
+### API Integration
+All backend calls are in `src/services/api.js`:
+- Registration: `/api/register/begin` and `/api/register/finish`
+- Authentication: `/api/login/begin` and `/api/login/finish`
+- User management: `/api/user/profile` and `/api/user/passkeys`
 
-### **CORS Errors**
-Ensure backend is running on port 8080 and frontend on 5173. The backend has CORS configured for `http://localhost:5173`.
+The API base URL is determined by:
+1. Checking for `VITE_API_URL` environment variable
+2. Checking for ngrok configuration in build scripts
+3. Falling back to `http://localhost:8080`
 
-### **WebAuthn Not Supported**
-The demo requires a modern browser with WebAuthn support:
-- Chrome 67+
-- Firefox 60+
-- Safari 14+
-- Edge 18+
-
-### **Registration Fails**
-Check browser console for detailed error messages. Common issues:
-- Username validation (client/server mismatch)
+### Error Handling
+The app displays user-friendly error messages while logging details to console. Check console for:
 - WebAuthn API errors
-- Session timeout (registration has 5-minute limit)
+- Network request failures
+- Validation errors
 
-### **Profile Page 401 Errors**
-This is expected behavior when accessing protected routes without authentication. The demo will redirect to login and back to the requested page.
+## Production Build
 
-## 📚 Learn More
+```bash
+# Build for production with localhost
+npm run build
 
-- [WebAuthn Guide](https://webauthn.guide/)
-- [Passkeys Documentation](https://passkeys.dev/)
-- [React 19 Documentation](https://react.dev/)
-- [FIDO Alliance](https://fidoalliance.org/)
+# Build for production with ngrok
+npm run build:ngrok
 
----
+# Test production build locally
+npm run preview
 
-**💡 Tip**: When testing, use the browser's Developer Tools Console to see detailed WebAuthn logs and debug authentication issues.
+# Deploy dist/ folder to your hosting service
+```
+
+### Build Scripts
+- `start-dev.sh`: Configures development server with ngrok if available
+- `start-localhost.sh`: Forces localhost configuration
+- `build-with-ngrok.sh`: Production build with ngrok URL injection
