@@ -1,517 +1,148 @@
-# WebAuthn Passkey Demo - Android Kotlin Frontend
+# Passkey Demo - Android App
 
-A native Android Kotlin app demonstrating WebAuthn passkey authentication that works seamlessly with Google Password Manager and cross-platform keychain sync.
+Native Android app demonstrating WebAuthn passkey authentication with cross-platform support via Google Password Manager.
 
-## 🎯 Demo Goals
+## Configuration
 
-Showcase that passkeys created on any device (web, iOS, Android) can be used to authenticate across platforms when using shared keychains (Google Password Manager, iCloud Keychain, etc.).
+### Prerequisites
+- Android Studio Arctic Fox or newer
+- Android SDK 28+ (Android 9.0)
+- Android device or emulator with Google Play Services
+- ngrok tunnel running (for cross-platform testing)
 
-## 🛠 Implementation Plan
-
-### Core Features to Implement
-
-- **Passkey Registration**: Create new passkeys using Android WebAuthn APIs
-- **Passwordless Authentication**: Sign in using fingerprint/face unlock
-- **Cross-Platform Sync**: Demonstrate passkeys work across devices via Google PM
-- **Passkey Management**: View and delete user's passkeys
-- **Deep Link Authentication**: Handle authentication from external links
-
-### Technical Stack
-
-- **Language**: Kotlin
-- **Framework**: Jetpack Compose
-- **WebAuthn**: androidx.credentials (Credential Manager API)
-- **Biometrics**: androidx.biometric
-- **Networking**: Retrofit + OkHttp for backend communication
-- **Architecture**: MVVM with ViewModels and Repository pattern
-- **Minimum SDK**: API 28 (Android 9) for WebAuthn support
-
-### Project Structure
-
-```
-PasskeyDemoAndroid/
-├── app/
-│   ├── src/main/
-│   │   ├── java/com/example/passkeydemo/
-│   │   │   ├── ui/
-│   │   │   │   ├── register/
-│   │   │   │   │   ├── RegisterScreen.kt
-│   │   │   │   │   └── RegisterViewModel.kt
-│   │   │   │   ├── login/
-│   │   │   │   │   ├── LoginScreen.kt
-│   │   │   │   │   └── LoginViewModel.kt
-│   │   │   │   ├── dashboard/
-│   │   │   │   │   ├── DashboardScreen.kt
-│   │   │   │   │   └── DashboardViewModel.kt
-│   │   │   │   └── profile/
-│   │   │   │       ├── ProfileScreen.kt
-│   │   │   │       └── ProfileViewModel.kt
-│   │   │   ├── data/
-│   │   │   │   ├── api/
-│   │   │   │   │   ├── ApiService.kt
-│   │   │   │   │   └── ApiModels.kt
-│   │   │   │   ├── repository/
-│   │   │   │   │   └── PasskeyRepository.kt
-│   │   │   │   └── webauthn/
-│   │   │   │       └── WebAuthnManager.kt
-│   │   │   ├── utils/
-│   │   │   │   ├── Base64Utils.kt
-│   │   │   │   └── BiometricsHelper.kt
-│   │   │   └── MainActivity.kt
-│   │   ├── res/
-│   │   └── AndroidManifest.xml
-│   ├── build.gradle.kts
-│   └── proguard-rules.pro
-├── build.gradle.kts
-└── README.md
-```
-
-### Key Implementation Components
-
-#### 1. WebAuthn Manager (`WebAuthnManager.kt`)
-
-```kotlin
-import androidx.credentials.CredentialManager
-import androidx.credentials.CreatePublicKeyCredentialRequest
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.GetPublicKeyCredentialOption
-import androidx.credentials.PublicKeyCredential
-
-class WebAuthnManager(private val context: Context) {
-    
-    private val credentialManager = CredentialManager.create(context)
-    
-    suspend fun createPasskey(
-        challenge: String,
-        userId: String,
-        userName: String,
-        displayName: String
-    ): PublicKeyCredential {
-        
-        val requestJson = JSONObject().apply {
-            put("challenge", challenge)
-            put("rp", JSONObject().apply {
-                put("name", "WebAuthn Passkey Demo")
-                put("id", "passkey-demo.local")
-            })
-            put("user", JSONObject().apply {
-                put("id", userId)
-                put("name", userName)
-                put("displayName", displayName)
-            })
-            put("pubKeyCredParams", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("alg", -7)
-                    put("type", "public-key")
-                })
-            })
-            put("authenticatorSelection", JSONObject().apply {
-                put("authenticatorAttachment", "platform")
-                put("userVerification", "required")
-                put("requireResidentKey", true)
-            })
-            put("timeout", 60000)
-        }.toString()
-        
-        val request = CreatePublicKeyCredentialRequest(requestJson)
-        
-        val result = credentialManager.createCredential(
-            context = context as ComponentActivity,
-            request = request
-        )
-        
-        return result.credential as PublicKeyCredential
-    }
-    
-    suspend fun authenticateWithPasskey(challenge: String, allowCredentials: List<String>? = null): PublicKeyCredential {
-        val requestJson = JSONObject().apply {
-            put("challenge", challenge)
-            put("rpId", "passkey-demo.local")
-            put("userVerification", "required")
-            put("timeout", 60000)
-            allowCredentials?.let { creds ->
-                put("allowCredentials", JSONArray().apply {
-                    creds.forEach { credId ->
-                        put(JSONObject().apply {
-                            put("id", credId)
-                            put("type", "public-key")
-                        })
-                    }
-                })
-            }
-        }.toString()
-        
-        val getPublicKeyCredentialOption = GetPublicKeyCredentialOption(requestJson)
-        val getCredRequest = GetCredentialRequest(listOf(getPublicKeyCredentialOption))
-        
-        val result = credentialManager.getCredential(
-            context = context as ComponentActivity,
-            request = getCredRequest
-        )
-        
-        return result.credential as PublicKeyCredential
-    }
-}
-```
-
-#### 2. API Service (`ApiService.kt`)
-
-```kotlin
-import retrofit2.http.*
-
-interface ApiService {
-    
-    @POST("api/register/begin")
-    suspend fun registerBegin(@Body request: RegisterBeginRequest): RegistrationOptions
-    
-    @POST("api/register/finish")
-    suspend fun registerFinish(@Body credential: CredentialResponse): AuthResponse
-    
-    @POST("api/login/begin")
-    suspend fun loginBegin(@Body request: LoginBeginRequest): AuthenticationOptions
-    
-    @POST("api/login/finish")
-    suspend fun loginFinish(@Body assertion: AssertionResponse): AuthResponse
-    
-    @GET("api/user/passkeys")
-    suspend fun getUserPasskeys(): List<PasskeyInfo>
-    
-    @DELETE("api/user/passkeys/{id}")
-    suspend fun deletePasskey(@Path("id") credentialId: String)
-    
-    @POST("api/logout")
-    suspend fun logout()
-}
-
-data class RegisterBeginRequest(
-    val username: String,
-    val displayName: String
-)
-
-data class LoginBeginRequest(
-    val username: String? = null
-)
-```
-
-#### 3. Dashboard Screen (`DashboardScreen.kt`)
-
-```kotlin
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DashboardScreen(
-    viewModel: DashboardViewModel,
-    onLogout: () -> Unit
-) {
-    val uiState by viewModel.uiState.collectAsState()
-    
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        
-        // User info header
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Welcome, ${uiState.user?.displayName ?: uiState.user?.username}!",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Text(
-                        text = "Signed in with passkey authentication",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Button(onClick = onLogout) {
-                    Text("Sign Out")
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Passkeys section
-        Text(
-            text = "Your Passkeys",
-            style = MaterialTheme.typography.headlineMedium
-        )
-        
-        if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxWidth().padding(32.dp)) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            }
-        } else if (uiState.passkeys.isEmpty()) {
-            NoPasskeysCard()
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                items(uiState.passkeys) { passkey ->
-                    PasskeyItem(
-                        passkey = passkey,
-                        onDelete = { viewModel.deletePasskey(passkey.id) }
-                    )
-                }
-            }
-        }
-        
-        // Cross-platform demo information
-        Spacer(modifier = Modifier.height(16.dp))
-        CrossPlatformInfoCard()
-    }
-}
-
-@Composable
-fun PasskeyItem(
-    passkey: PasskeyInfo,
-    onDelete: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "🔑 ${passkey.name}",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "Created: ${passkey.createdAt}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Transport: ${passkey.transports.joinToString()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete passkey")
-                }
-            }
-            
-            // Passkey status indicators
-            Row(modifier = Modifier.padding(top = 8.dp)) {
-                if (passkey.backedUp) {
-                    AssistChip(
-                        onClick = { },
-                        label = { Text("☁️ Synced") }
-                    )
-                }
-                if (passkey.userVerified) {
-                    AssistChip(
-                        onClick = { },
-                        label = { Text("🔐 Biometric") }
-                    )
-                }
-            }
-        }
-    }
-}
-```
-
-#### 4. Repository Pattern (`PasskeyRepository.kt`)
-
-```kotlin
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-
-class PasskeyRepository(
-    private val apiService: ApiService,
-    private val webAuthnManager: WebAuthnManager
-) {
-    
-    suspend fun registerPasskey(username: String, displayName: String): Result<AuthResponse> {
-        return try {
-            // Start registration
-            val options = apiService.registerBegin(RegisterBeginRequest(username, displayName))
-            
-            // Create passkey
-            val credential = webAuthnManager.createPasskey(
-                challenge = options.challenge,
-                userId = options.user.id,
-                userName = options.user.name,
-                displayName = options.user.displayName
-            )
-            
-            // Finish registration
-            val response = apiService.registerFinish(credential.toCredentialResponse())
-            Result.success(response)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-    
-    suspend fun authenticateWithPasskey(username: String? = null): Result<AuthResponse> {
-        return try {
-            // Start authentication
-            val options = apiService.loginBegin(LoginBeginRequest(username))
-            
-            // Authenticate with passkey
-            val assertion = webAuthnManager.authenticateWithPasskey(
-                challenge = options.challenge,
-                allowCredentials = options.allowCredentials?.map { it.id }
-            )
-            
-            // Finish authentication
-            val response = apiService.loginFinish(assertion.toAssertionResponse())
-            Result.success(response)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-    
-    fun getUserPasskeys(): Flow<List<PasskeyInfo>> = flow {
-        emit(apiService.getUserPasskeys())
-    }
-    
-    suspend fun deletePasskey(credentialId: String): Result<Unit> {
-        return try {
-            apiService.deletePasskey(credentialId)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-}
-```
-
-### Development Steps
-
-1. **Setup Project**
-   ```bash
-   # Create new Android project in Android Studio
-   # Set minSdk to 28 (Android 9)
-   # Add required dependencies
-   ```
-
-2. **Dependencies (`build.gradle.kts`)**
-   ```kotlin
-   dependencies {
-       implementation "androidx.credentials:credentials:1.2.2"
-       implementation "androidx.credentials:credentials-play-services-auth:1.2.2"
-       implementation "androidx.biometric:biometric:1.1.0"
-       implementation "androidx.compose.ui:ui:$compose_version"
-       implementation "androidx.compose.material3:material3:$material3_version"
-       implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_version"
-       implementation "com.squareup.retrofit2:retrofit:2.9.0"
-       implementation "com.squareup.retrofit2:converter-gson:2.9.0"
-       implementation "androidx.navigation:navigation-compose:$nav_version"
-   }
-   ```
-
-3. **Permissions (`AndroidManifest.xml`)**
-   ```xml
-   <uses-permission android:name="android.permission.INTERNET" />
-   <uses-permission android:name="android.permission.USE_FINGERPRINT" />
-   <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-   ```
-
-4. **Implementation Phases**
-   - Phase 1: Basic WebAuthn integration
-   - Phase 2: UI with Jetpack Compose
-   - Phase 3: Google Password Manager integration
-   - Phase 4: Cross-platform testing
-
-### Cross-Platform Sync Testing
-
-The Android app should demonstrate:
-
-1. **Google Password Manager**: Passkeys sync across Android devices and Chrome
-2. **Cross-Platform Compatibility**: Passkeys work with iOS (via Google PM) and web
-3. **Enterprise Integration**: Managed passkeys for work profiles
-4. **Deep Links**: Authentication from external apps/web
-
-### Demo Flow Examples
-
-1. **Create on Android** → Authenticate on web browser
-2. **Create on iPhone** → Authenticate on Android (via Google sync)
-3. **Create on web** → Authenticate on Android app
-4. **Delete from Android** → Verify removal across platforms
-
-## 📱 Getting Started
+### Quick Setup
 
 ```bash
-# Prerequisites
-# - Android Studio Hedgehog or newer
-# - Android device with API 28+ (Android 9+)
-# - Google Play Services 20.2+
-# - Backend server running on passkey-demo.local:8080
+# 1. Start ngrok (from root directory)
+../scripts/start-ngrok.sh
 
-# Steps
-1. Open Android Studio
-2. Create new project with Jetpack Compose
-3. Set minSdk to 28
-4. Add Credential Manager dependencies
-5. Implement WebAuthn integration
-6. Test on physical device (required for biometrics)
+# 2. Build React app for ngrok
+cd ../frontend-react
+npm install && npm run build:ngrok
+
+# 3. Configure Android app
+cd ../frontend-kotlin
+./setup-domain.sh
+
+# 4. Setup and run backend
+cd ../backend
+./setup-aasa.sh YOUR_TEAM_ID  # Use any team ID for Android
+source ../.env && ./passkey-backend
+
+# 5. Open in Android Studio and run
 ```
 
-## 🔄 Integration with Existing Demo
+### Configuration Files
 
-This Android frontend will use the **same backend API** as the React and iOS frontends, demonstrating true cross-platform passkey compatibility.
+**`ngrok-config.json`** - Auto-generated by setup script
+```json
+{
+  "ngrok_url": "https://abc123.ngrok-free.app"
+}
+```
 
-### Shared Backend Endpoints
-- `POST /api/register/begin` - Start passkey registration
-- `POST /api/register/finish` - Complete passkey registration  
-- `POST /api/login/begin` - Start authentication
-- `POST /api/login/finish` - Complete authentication
-- `GET /api/user/passkeys` - Get user's passkeys
-- `DELETE /api/user/passkeys/{id}` - Delete specific passkey
+The app reads this at runtime to configure the API base URL.
 
-### Cross-Platform Testing Matrix
+## Running the App
 
-| Create Platform | Authenticate Platform | Sync Method | Expected Result |
-|----------------|----------------------|-------------|-----------------|
-| Android App | React Web | Google PM | ✅ Should work |
-| React Web | Android App | Google PM | ✅ Should work |
-| iOS App | Android App | Google PM | ✅ Should work |
-| Android App | iOS App | Google PM | ✅ Should work |
-| Android Device A | Android Device B | Google Sync | ✅ Should work |
+### Development
+1. Open this directory in Android Studio
+2. Sync project with Gradle files
+3. Select your device/emulator
+4. Run the app
 
-## 🚀 Future Enhancements
+### Important Notes
+- **Physical device recommended** - Better biometric support
+- **Google Play Services required** - For Credential Manager API
+- **Same network required** - Device and dev machine for local testing
+- **API 28+ required** - Minimum for WebAuthn support
 
-- **App Links**: Deep link authentication from web/other apps
-- **Instant Apps**: Lightweight authentication experiences
-- **Google Assistant**: Voice-triggered authentication
-- **Wear OS**: Companion app for wrist-based authentication
-- **Enterprise Features**: Work profile and managed device support
-- **Autofill Integration**: Seamless form filling with passkeys
+## Features
 
-## 🔧 Technical Considerations
+- **Passkey Registration** - Create passkeys with biometric authentication
+- **Username Login** - Sign in with username and passkey
+- **Discoverable Login** - Passwordless login without username
+- **Cross-Platform Sync** - Works with passkeys from iOS/web via Google Password Manager
+- **Passkey Management** - View, rename, and delete passkeys
 
-### Google Password Manager Integration
-- Requires Google Play Services 20.2+
-- Passkeys automatically sync to user's Google account
-- Works across Android devices and Chrome browsers
-- Enterprise policies can control sync behavior
+## Debugging
 
-### Biometric Requirements
-- Device must have secure lock screen
-- Biometric enrollment required for passkey creation
-- Fallback to PIN/pattern if biometrics fail
-- Hardware security module preferred
+### Common Issues
 
-### WebAuthn Attestation
-- Android SafetyNet attestation available
-- Play Integrity API for device verification
-- Enterprise attestation for managed devices
+**"No credentials available" error**
+- Ensure Google Play Services is updated
+- Check that screen lock is enabled
+- Verify Google account is signed in
 
----
+**Network connection errors**
+- For emulator: Use `10.0.2.2` instead of `localhost`
+- For device: Ensure same network as dev machine
+- Check ngrok URL is correct in `ngrok-config.json`
 
-**Status**: 📋 **Implementation Planned** - Ready for development
+**Biometric prompt not showing**
+- Enable screen lock in device settings
+- Add fingerprint/face in security settings
+- Check app has USE_BIOMETRIC permission
+
+### Logging
+
+Monitor Android Studio Logcat:
+```
+Filter: "PasskeyDemo"
+
+Example logs:
+D/PasskeyDemo: Starting registration for username: alice
+D/PasskeyDemo: Create credential request prepared
+D/PasskeyDemo: Credential created successfully
+D/PasskeyDemo: Registration completed
+```
+
+### Testing Cross-Platform
+
+1. **Register on Android** → Sign in on iOS/web
+2. **Register on web** → Sign in on Android
+3. **Google Password Manager sync** → Use across devices
+
+## Project Structure
+
+```
+frontend-kotlin/
+├── app/
+│   ├── build.gradle.kts
+│   ├── src/main/
+│   │   ├── AndroidManifest.xml
+│   │   ├── java/com/passkeydemo/android/
+│   │   │   ├── MainActivity.kt
+│   │   │   ├── PasskeyDemoApp.kt
+│   │   │   ├── data/
+│   │   │   ├── di/
+│   │   │   ├── ui/
+│   │   │   └── util/
+│   │   └── res/
+├── build.gradle.kts
+└── settings.gradle.kts
+```
+
+## Architecture
+
+- **MVVM Pattern** - ViewModels with Compose UI
+- **Credential Manager API** - Android's WebAuthn implementation
+- **Hilt** - Dependency injection
+- **Retrofit** - Network calls to backend
+- **Jetpack Compose** - Modern declarative UI
+
+## Security Notes
+
+- **Biometric required** - Fingerprint, face, or screen lock
+- **Hardware-backed keys** - Stored in Android Keystore
+- **Domain verification** - Prevents credential phishing
+- **Google sync** - Optional passkey backup
+
+## Production Deployment
+
+For production:
+1. Update `BASE_URL` in NetworkModule
+2. Configure ProGuard rules
+3. Enable certificate pinning
+4. Add crash reporting
+5. Test on multiple Android versions
