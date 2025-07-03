@@ -56,6 +56,7 @@ The app reads this at runtime to configure the API base URL.
 - **Google Play Services required** - For Credential Manager API
 - **Same network required** - Device and dev machine for local testing
 - **API 28+ required** - Minimum for WebAuthn support
+- **Java/JDK 17+ required** - For Gradle builds
 
 ## Features
 
@@ -73,6 +74,12 @@ The app reads this at runtime to configure the API base URL.
 - Ensure Google Play Services is updated
 - Check that screen lock is enabled
 - Verify Google account is signed in
+
+**Gradle/Java errors**
+- Ensure Java/JDK 17+ is installed
+- Copy `local.properties.template` to `local.properties` 
+- Set `org.gradle.java.home` in `local.properties` if needed
+- In Android Studio: File → Project Structure → SDK Location → JDK Location
 
 **Network connection errors**
 - For emulator: Use `10.0.2.2` instead of `localhost`

@@ -4,16 +4,27 @@ This Android project is ready to be opened in Android Studio, but needs some add
 
 ## Required Setup
 
-1. **App Icons**: Generate proper app icons for all densities
+1. **Java/JDK Configuration**:
+   - Install JDK 17 or higher
+   - Copy `local.properties.template` to `local.properties`
+   - Set Java home if needed in `local.properties`
+   - Android Studio should handle this automatically
+
+2. **Gradle Configuration**:
+   - The project includes Gradle wrapper
+   - Should sync automatically in Android Studio
+   - If issues occur, see troubleshooting in README.md
+
+3. **App Icons**: Generate proper app icons for all densities
    - Use Android Studio's Image Asset Studio
    - Or copy icons from the iOS project
    - Place in appropriate mipmap folders
 
-2. **Credential Manager Dependencies**: 
+4. **Credential Manager Dependencies**: 
    - Ensure Google Play Services is up to date on test devices
    - Test on Android 9+ devices
 
-3. **WebAuthn Implementation**:
+5. **WebAuthn Implementation**:
    - The project structure is ready
    - Need to implement actual WebAuthn flows using Credential Manager API
    - See equivalent iOS implementation in `../frontend-swift/`

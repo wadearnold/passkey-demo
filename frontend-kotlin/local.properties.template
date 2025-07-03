@@ -1,0 +1,15 @@
+# This file contains machine-specific properties for the Android build.
+# Copy this file to local.properties and modify as needed.
+
+# Location of the Android SDK. This is set automatically by Android Studio.
+# sdk.dir=/Users/USERNAME/Library/Android/sdk
+
+# Location of the Android NDK (if needed)
+# ndk.dir=/Users/USERNAME/Library/Android/sdk/ndk/VERSION
+
+# Java home for Gradle builds (if you encounter Java home issues)
+# Uncomment and set to your Java installation path:
+# org.gradle.java.home=/Library/Java/JavaVirtualMachines/jdk-VERSION/Contents/Home
+
+# For JetBrains Runtime (if using Android Studio's embedded JDK):
+# org.gradle.java.home=/Applications/Android Studio.app/Contents/jbr/Contents/Home
