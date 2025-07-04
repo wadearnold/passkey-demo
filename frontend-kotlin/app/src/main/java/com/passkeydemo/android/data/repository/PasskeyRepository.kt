@@ -47,8 +47,8 @@ class PasskeyRepository @Inject constructor(
             val result = credentialManager.createCredential(context, request)
             
             // Step 3: Send credential to server
-            val credential = result.credential
-            val response = api.finishRegistration(parseCredentialResponse(credential))
+            val credential = result as CreatePublicKeyCredentialResponse
+            val response = api.finishRegistration(parseRegistrationResponse(credential))
             
             if (response.success && response.data != null) {
                 _currentUser.value = response.data
@@ -88,8 +88,8 @@ class PasskeyRepository @Inject constructor(
             val result = credentialManager.getCredential(context, request)
             
             // Step 3: Send credential to server
-            val credential = result.credential
-            val response = api.finishAuthentication(parseCredentialResponse(credential))
+            val credential = result.credential as PublicKeyCredential
+            val response = api.finishAuthentication(parseAuthenticationResponse(credential))
             
             if (response.success && response.data != null) {
                 _currentUser.value = response.data
@@ -133,8 +133,8 @@ class PasskeyRepository @Inject constructor(
             val result = credentialManager.getCredential(context, request)
             
             // Step 3: Send credential to server
-            val credential = result.credential
-            val response = api.finishAuthentication(parseCredentialResponse(credential))
+            val credential = result.credential as PublicKeyCredential
+            val response = api.finishAuthentication(parseAuthenticationResponse(credential))
             
             if (response.success && response.data != null) {
                 _currentUser.value = response.data
@@ -246,35 +246,26 @@ class PasskeyRepository @Inject constructor(
             .build()
     }
     
-    private fun parseCredentialResponse(credential: Credential): Map<String, Any> {
+    private fun parseRegistrationResponse(credential: CreatePublicKeyCredentialResponse): Map<String, Any> {
         return try {
-            when (credential) {
-                is CreatePublicKeyCredentialResponse -> {
-                    val json = JSONObject(credential.registrationResponseJson)
-                    json.keys().asSequence().associateWith { key ->
-                        json.get(key)
-                    }
-                }
-                is PublicKeyCredential -> {
-                    val json = JSONObject(credential.authenticationResponseJson)
-                    json.keys().asSequence().associateWith { key ->
-                        json.get(key)
-                    }
-                }
-                else -> {
-                    // Fallback for other credential types
-                    val data = credential.data
-                    val jsonString = data.getString("androidx.credentials.BUNDLE_KEY_REGISTRATION_RESPONSE_JSON")
-                        ?: data.getString("androidx.credentials.BUNDLE_KEY_AUTHENTICATION_RESPONSE_JSON")
-                        ?: "{}"
-                    val json = JSONObject(jsonString)
-                    json.keys().asSequence().associateWith { key ->
-                        json.get(key)
-                    }
-                }
+            val json = JSONObject(credential.registrationResponseJson)
+            json.keys().asSequence().associateWith { key ->
+                json.get(key)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse credential response", e)
+            Log.e(TAG, "Failed to parse registration response", e)
+            emptyMap()
+        }
+    }
+    
+    private fun parseAuthenticationResponse(credential: PublicKeyCredential): Map<String, Any> {
+        return try {
+            val json = JSONObject(credential.authenticationResponseJson)
+            json.keys().asSequence().associateWith { key ->
+                json.get(key)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse authentication response", e)
             emptyMap()
         }
     }
