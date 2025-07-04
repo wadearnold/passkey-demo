@@ -5,7 +5,6 @@ import android.util.Base64
 import android.util.Log
 import androidx.credentials.*
 import androidx.credentials.exceptions.*
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.passkeydemo.android.data.api.PasskeyApi
 import com.passkeydemo.android.data.models.*
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -48,7 +47,7 @@ class PasskeyRepository @Inject constructor(
             val result = credentialManager.createCredential(context, request)
             
             // Step 3: Send credential to server
-            val credential = (result as CreatePublicKeyCredentialResponse)
+            val credential = result.credential
             val response = api.finishRegistration(parseCredentialResponse(credential))
             
             if (response.success && response.data != null) {
@@ -89,7 +88,7 @@ class PasskeyRepository @Inject constructor(
             val result = credentialManager.getCredential(context, request)
             
             // Step 3: Send credential to server
-            val credential = result.credential as PublicKeyCredential
+            val credential = result.credential
             val response = api.finishAuthentication(parseCredentialResponse(credential))
             
             if (response.success && response.data != null) {
@@ -134,7 +133,7 @@ class PasskeyRepository @Inject constructor(
             val result = credentialManager.getCredential(context, request)
             
             // Step 3: Send credential to server
-            val credential = result.credential as PublicKeyCredential
+            val credential = result.credential
             val response = api.finishAuthentication(parseCredentialResponse(credential))
             
             if (response.success && response.data != null) {
@@ -248,15 +247,31 @@ class PasskeyRepository @Inject constructor(
     }
     
     private fun parseCredentialResponse(credential: Credential): Map<String, Any> {
-        val data = credential.data
         return try {
-            // Parse the credential response JSON
-            val json = JSONObject(data.getString("androidx.credentials.BUNDLE_KEY_REGISTRATION_RESPONSE_JSON")
-                ?: data.getString("androidx.credentials.BUNDLE_KEY_AUTHENTICATION_RESPONSE_JSON") ?: "{}")
-            
-            // Convert to map for API
-            json.keys().asSequence().associateWith { key ->
-                json.get(key)
+            when (credential) {
+                is CreatePublicKeyCredentialResponse -> {
+                    val json = JSONObject(credential.registrationResponseJson)
+                    json.keys().asSequence().associateWith { key ->
+                        json.get(key)
+                    }
+                }
+                is PublicKeyCredential -> {
+                    val json = JSONObject(credential.authenticationResponseJson)
+                    json.keys().asSequence().associateWith { key ->
+                        json.get(key)
+                    }
+                }
+                else -> {
+                    // Fallback for other credential types
+                    val data = credential.data
+                    val jsonString = data.getString("androidx.credentials.BUNDLE_KEY_REGISTRATION_RESPONSE_JSON")
+                        ?: data.getString("androidx.credentials.BUNDLE_KEY_AUTHENTICATION_RESPONSE_JSON")
+                        ?: "{}"
+                    val json = JSONObject(jsonString)
+                    json.keys().asSequence().associateWith { key ->
+                        json.get(key)
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse credential response", e)
