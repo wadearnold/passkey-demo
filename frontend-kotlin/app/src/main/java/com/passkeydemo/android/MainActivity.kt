@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PasskeyDemoApp()
+                    PasskeyDemoNavigation()
                 }
             }
         }
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PasskeyDemoApp() {
+fun PasskeyDemoNavigation() {
     val navController = rememberNavController()
     
     NavHost(
