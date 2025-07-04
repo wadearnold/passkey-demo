@@ -5,14 +5,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.passkeydemo.android.ui.screens.*
 import com.passkeydemo.android.ui.theme.PasskeyDemoTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -23,15 +23,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PasskeyDemoTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        WelcomeScreen()
-                    }
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    PasskeyDemoApp()
                 }
             }
         }
@@ -39,17 +35,67 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WelcomeScreen() {
-    Text(
-        text = "🔐 WebAuthn Passkey Demo\n\nAndroid app coming soon!\n\nThis project structure is ready for development in Android Studio.",
-        style = MaterialTheme.typography.headlineMedium
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun WelcomeScreenPreview() {
-    PasskeyDemoTheme {
-        WelcomeScreen()
+fun PasskeyDemoApp() {
+    val navController = rememberNavController()
+    
+    NavHost(
+        navController = navController,
+        startDestination = "home"
+    ) {
+        composable("home") {
+            HomeScreen(
+                onNavigateToRegister = { navController.navigate("register") },
+                onNavigateToLogin = { navController.navigate("login") },
+                onNavigateToDiscoverableLogin = { navController.navigate("discoverable_login") }
+            )
+        }
+        
+        composable("register") {
+            RegisterScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = {
+                    navController.navigate("profile") {
+                        popUpTo("home") { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable("login") {
+            LoginScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = {
+                    navController.navigate("profile") {
+                        popUpTo("home") { inclusive = true }
+                    }
+                },
+                onNavigateToDiscoverableLogin = {
+                    navController.navigate("discoverable_login") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable("discoverable_login") {
+            DiscoverableLoginScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = {
+                    navController.navigate("profile") {
+                        popUpTo("home") { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable("profile") {
+            ProfileScreen(
+                onNavigateToLogin = {
+                    navController.navigate("home") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
     }
 }
