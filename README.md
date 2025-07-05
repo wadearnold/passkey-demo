@@ -6,19 +6,20 @@ Cross-platform passwordless authentication demonstration using WebAuthn passkeys
 
 This project demonstrates WebAuthn passkey authentication with:
 - **Passwordless login** using Face ID, Touch ID, or Windows Hello
-- **Cross-platform passkeys** that work seamlessly between iOS app and web browsers
+- **Cross-platform passkeys** that work seamlessly between iOS, Android, and web browsers
 - **Three auth flows**: Registration, discoverable login, and username-based login
-- **Complete implementation** with iOS (Swift), web (React), and backend (Go)
+- **Complete implementation** with iOS (Swift), Android (Kotlin), web (React), and backend (Go)
 
 ## Quick Start
 
 ### Prerequisites
 - ngrok account (free tier works)
 - iOS: Xcode 15+, Apple Developer account
+- Android: Android Studio, Android 14+ device/emulator
 - Backend: Go 1.21+
 - Frontend: Node.js 18+
 
-### Setup with ngrok (Required for iOS)
+### Setup with ngrok (Required for iOS/Android)
 
 ```bash
 # 1. Start ngrok tunnel
@@ -38,6 +39,11 @@ cd ../backend
 source ../.env && ./passkey-backend
 
 # 5. Build iOS app in Xcode
+
+# 6. (Optional) Configure Android app
+cd ../frontend-kotlin
+./setup-domain.sh
+# Build in Android Studio
 ```
 
 **Access the app at your ngrok URL** (e.g., `https://abc123.ngrok.io`)
@@ -63,6 +69,7 @@ passkey-demo/
 ├── backend/          # Go WebAuthn server
 ├── frontend-react/   # React web app
 ├── frontend-swift/   # iOS native app
+├── frontend-kotlin/  # Android native app
 ├── scripts/          # Setup automation
 └── docs/            # Documentation
 ```
@@ -72,6 +79,7 @@ passkey-demo/
 - [Backend Configuration & Debugging](backend/README.md)
 - [React Frontend Setup](frontend-react/README.md)
 - [iOS App Development](frontend-swift/README.md)
+- [Android App Development](frontend-kotlin/README.md)
 
 ## Key Implementation Notes
 
