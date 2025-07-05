@@ -1,6 +1,7 @@
 package com.passkeydemo.android.di
 
 import android.content.Context
+import android.util.Log
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.passkeydemo.android.data.api.PasskeyApi
 import dagger.Module
@@ -16,13 +17,13 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+    private const val TAG = "NetworkModule"
     
     @Provides
     @Singleton
@@ -65,30 +66,12 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideRetrofit(
-        @ApplicationContext context: Context,
         okHttpClient: OkHttpClient,
         json: Json
     ): Retrofit {
-        // Check for ngrok configuration
-        val ngrokConfigFile = File(context.filesDir.parentFile?.parentFile, "ngrok-config.json")
-        val baseUrl = if (ngrokConfigFile.exists()) {
-            try {
-                val config = ngrokConfigFile.readText()
-                val ngrokUrl = Json.parseToJsonElement(config)
-                    .jsonObject["ngrok_url"]
-                    ?.toString()
-                    ?.replace("\"", "")
-                    ?: getDefaultBaseUrl()
-                "$ngrokUrl/"
-            } catch (e: Exception) {
-                getDefaultBaseUrl()
-            }
-        } else {
-            getDefaultBaseUrl()
-        }
-        
+        // JUST HARDCODE YOUR NGROK URL HERE
         return Retrofit.Builder()
-            .baseUrl(baseUrl)
+            .baseUrl("https://67e9-76-154-22-254.ngrok-free.app/")
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
@@ -98,15 +81,5 @@ object NetworkModule {
     @Singleton
     fun providePasskeyApi(retrofit: Retrofit): PasskeyApi {
         return retrofit.create(PasskeyApi::class.java)
-    }
-    
-    private fun getDefaultBaseUrl(): String {
-        // For Android emulator, use 10.0.2.2 to access host machine's localhost
-        return if (android.os.Build.FINGERPRINT.contains("generic")) {
-            "http://10.0.2.2:8080/"
-        } else {
-            // For physical devices, you'll need to use your machine's IP or ngrok
-            "http://localhost:8080/"
-        }
     }
 }

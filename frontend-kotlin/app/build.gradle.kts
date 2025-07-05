@@ -81,6 +81,9 @@ dependencies {
     // Biometric authentication
     implementation("androidx.biometric:biometric:1.1.0")
     
+    // Google Play Services for compatibility checking
+    implementation("com.google.android.gms:play-services-base:18.3.0")
+    
     // Hilt for dependency injection
     implementation("com.google.dagger:hilt-android:2.51")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")

@@ -1,7 +1,6 @@
 package com.passkeydemo.android.data.repository
 
 import android.content.Context
-import android.util.Base64
 import android.util.Log
 import androidx.credentials.*
 import androidx.credentials.exceptions.*
@@ -20,14 +19,11 @@ class PasskeyRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val api: PasskeyApi
 ) {
-    private val TAG = "PasskeyRepository"
+    private val tag = "PasskeyRepository"
     private val credentialManager = CredentialManager.create(context)
     
     private val _currentUser = MutableStateFlow<UserProfile?>(null)
     val currentUser: StateFlow<UserProfile?> = _currentUser.asStateFlow()
-    
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
@@ -35,19 +31,21 @@ class PasskeyRepository @Inject constructor(
     // Registration flow
     suspend fun register(username: String, displayName: String): Result<UserProfile> {
         return try {
-            _isLoading.value = true
             _error.value = null
             
             // Step 1: Get registration options from server
+            Log.d(tag, "Requesting registration options for username: $username, displayName: $displayName")
             val options = api.beginRegistration(RegistrationRequest(username, displayName))
-            Log.d(TAG, "Registration options received for $username")
+            Log.d(tag, "Registration options received: $options")
+            Log.d(tag, "PublicKey options: ${options.publicKey}")
             
             // Step 2: Create passkey using Credential Manager
             val request = createRegistrationRequest(options.publicKey)
             val result = credentialManager.createCredential(context, request)
             
             // Step 3: Send credential to server
-            val credential = result as CreatePublicKeyCredentialResponse
+            val credential = result as? CreatePublicKeyCredentialResponse
+                ?: throw Exception("Invalid credential response type")
             val response = api.finishRegistration(parseRegistrationResponse(credential))
             
             if (response.success && response.data != null) {
@@ -57,38 +55,41 @@ class PasskeyRepository @Inject constructor(
                 throw Exception(response.error ?: "Registration failed")
             }
         } catch (e: CreateCredentialCancellationException) {
-            Log.e(TAG, "User cancelled registration", e)
+            Log.e(tag, "User cancelled registration", e)
             _error.value = "Registration cancelled"
             Result.failure(Exception("Registration cancelled"))
+        } catch (e: CreateCredentialNoCreateOptionException) {
+            Log.e(tag, "No create options available - likely Google Play Services issue", e)
+            _error.value = "Passkeys not available. Please check:\n• Google Play Services is updated\n• Screen lock is enabled\n• Not using an old emulator"
+            Result.failure(e)
         } catch (e: CreateCredentialException) {
-            Log.e(TAG, "Failed to create credential", e)
+            Log.e(tag, "Failed to create credential: ${e.message}", e)
             _error.value = "Failed to create passkey: ${e.message}"
             Result.failure(e)
         } catch (e: Exception) {
-            Log.e(TAG, "Registration error", e)
-            _error.value = e.message
+            Log.e(tag, "Registration error: ${e.message}", e)
+            Log.e(tag, "Stack trace:", e)
+            _error.value = e.message ?: "Unknown error occurred"
             Result.failure(e)
-        } finally {
-            _isLoading.value = false
         }
     }
     
     // Authentication with username
     suspend fun authenticate(username: String): Result<UserProfile> {
         return try {
-            _isLoading.value = true
             _error.value = null
             
             // Step 1: Get authentication options from server
             val options = api.beginAuthentication(AuthenticationRequest(username))
-            Log.d(TAG, "Authentication options received for $username")
+            Log.d(tag, "Authentication options received for $username")
             
             // Step 2: Get credential using Credential Manager
             val request = createAuthenticationRequest(options.publicKey)
             val result = credentialManager.getCredential(context, request)
             
             // Step 3: Send credential to server
-            val credential = result.credential as PublicKeyCredential
+            val credential = result.credential as? PublicKeyCredential
+                ?: throw Exception("Invalid credential response type")
             val response = api.finishAuthentication(parseAuthenticationResponse(credential))
             
             if (response.success && response.data != null) {
@@ -98,42 +99,40 @@ class PasskeyRepository @Inject constructor(
                 throw Exception(response.error ?: "Authentication failed")
             }
         } catch (e: GetCredentialCancellationException) {
-            Log.e(TAG, "User cancelled authentication", e)
+            Log.e(tag, "User cancelled authentication", e)
             _error.value = "Authentication cancelled"
             Result.failure(Exception("Authentication cancelled"))
         } catch (e: NoCredentialException) {
-            Log.e(TAG, "No credentials found", e)
+            Log.e(tag, "No credentials found", e)
             _error.value = "No passkeys found for this user"
             Result.failure(e)
         } catch (e: GetCredentialException) {
-            Log.e(TAG, "Failed to get credential", e)
+            Log.e(tag, "Failed to get credential", e)
             _error.value = "Failed to authenticate: ${e.message}"
             Result.failure(e)
         } catch (e: Exception) {
-            Log.e(TAG, "Authentication error", e)
+            Log.e(tag, "Authentication error", e)
             _error.value = e.message
             Result.failure(e)
-        } finally {
-            _isLoading.value = false
         }
     }
     
     // Discoverable authentication (no username)
     suspend fun authenticateDiscoverable(): Result<UserProfile> {
         return try {
-            _isLoading.value = true
             _error.value = null
             
             // Step 1: Get authentication options from server (no username)
             val options = api.beginAuthentication(AuthenticationRequest())
-            Log.d(TAG, "Discoverable authentication options received")
+            Log.d(tag, "Discoverable authentication options received")
             
             // Step 2: Get credential using Credential Manager
             val request = createAuthenticationRequest(options.publicKey)
             val result = credentialManager.getCredential(context, request)
             
             // Step 3: Send credential to server
-            val credential = result.credential as PublicKeyCredential
+            val credential = result.credential as? PublicKeyCredential
+                ?: throw Exception("Invalid credential response type")
             val response = api.finishAuthentication(parseAuthenticationResponse(credential))
             
             if (response.success && response.data != null) {
@@ -143,11 +142,9 @@ class PasskeyRepository @Inject constructor(
                 throw Exception(response.error ?: "Authentication failed")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Discoverable authentication error", e)
+            Log.e(tag, "Discoverable authentication error", e)
             _error.value = e.message
             Result.failure(e)
-        } finally {
-            _isLoading.value = false
         }
     }
     
@@ -157,7 +154,7 @@ class PasskeyRepository @Inject constructor(
             val response = api.getUserPasskeys()
             Result.success(response.passkeys)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get passkeys", e)
+            Log.e(tag, "Failed to get passkeys", e)
             Result.failure(e)
         }
     }
@@ -172,7 +169,7 @@ class PasskeyRepository @Inject constructor(
                 throw Exception(response.error ?: "Failed to delete passkey")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to delete passkey", e)
+            Log.e(tag, "Failed to delete passkey", e)
             Result.failure(e)
         }
     }
@@ -184,7 +181,7 @@ class PasskeyRepository @Inject constructor(
             _currentUser.value = null
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Logout error", e)
+            Log.e(tag, "Logout error", e)
             Result.failure(e)
         }
     }
@@ -202,12 +199,14 @@ class PasskeyRepository @Inject constructor(
                 put("name", options.user.name)
                 put("displayName", options.user.displayName)
             })
-            put("pubKeyCredParams", options.pubKeyCredParams.map { param ->
-                JSONObject().apply {
-                    put("type", param.type)
-                    put("alg", param.alg)
+            put("pubKeyCredParams", org.json.JSONArray(
+                options.pubKeyCredParams.map { param ->
+                    JSONObject().apply {
+                        put("type", param.type)
+                        put("alg", param.alg)
+                    }
                 }
-            })
+            ))
             options.authenticatorSelection?.let { selection ->
                 put("authenticatorSelection", JSONObject().apply {
                     selection.authenticatorAttachment?.let { put("authenticatorAttachment", it) }
@@ -219,6 +218,7 @@ class PasskeyRepository @Inject constructor(
             options.attestation?.let { put("attestation", it) }
         }
         
+        Log.d(tag, "Creating credential request with JSON: ${requestJson.toString(2)}")
         return CreatePublicKeyCredentialRequest(requestJson.toString())
     }
     
@@ -253,7 +253,7 @@ class PasskeyRepository @Inject constructor(
                 json.get(key)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse registration response", e)
+            Log.e(tag, "Failed to parse registration response", e)
             emptyMap()
         }
     }
@@ -265,12 +265,9 @@ class PasskeyRepository @Inject constructor(
                 json.get(key)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse authentication response", e)
+            Log.e(tag, "Failed to parse authentication response", e)
             emptyMap()
         }
     }
     
-    fun clearError() {
-        _error.value = null
-    }
 }

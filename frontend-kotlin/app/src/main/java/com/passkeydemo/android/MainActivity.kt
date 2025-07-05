@@ -46,7 +46,8 @@ fun PasskeyDemoNavigation() {
             HomeScreen(
                 onNavigateToRegister = { navController.navigate("register") },
                 onNavigateToLogin = { navController.navigate("login") },
-                onNavigateToDiscoverableLogin = { navController.navigate("discoverable_login") }
+                onNavigateToDiscoverableLogin = { navController.navigate("discoverable_login") },
+                onNavigateToSettings = { navController.navigate("settings") }
             )
         }
         
@@ -94,7 +95,16 @@ fun PasskeyDemoNavigation() {
                     navController.navigate("home") {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onNavigateToSettings = {
+                    navController.navigate("settings")
                 }
+            )
+        }
+        
+        composable("settings") {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

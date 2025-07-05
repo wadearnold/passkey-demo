@@ -21,6 +21,7 @@ import java.util.*
 @Composable
 fun ProfileScreen(
     onNavigateToLogin: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -40,6 +41,9 @@ fun ProfileScreen(
             TopAppBar(
                 title = { Text("Profile") },
                 actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
                     IconButton(onClick = viewModel::logout) {
                         Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }
